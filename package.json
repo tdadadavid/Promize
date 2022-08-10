@@ -1,0 +1,14 @@
+{
+  "name": "promisesintddway",
+  "version": "1.0.0",
+  "description": "Understanding and Implementing the Promises concept in Javascript also with Test",
+  "main": "index.js",
+  "scripts": {
+    "test": "Jest --watchAll"
+  },
+  "author": "Dada David <davidtofunmidada@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "jest": "^28.1.3"
+  }
+}
