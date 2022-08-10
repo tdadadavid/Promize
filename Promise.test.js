@@ -1,6 +1,5 @@
 // const MyPromise = require("./KylePromises");
-const MyPromise = require("" +
-  "");
+const MyPromise = require("/Promise");
 
 const DEFAULT_VALUE = "default"
 
