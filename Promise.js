@@ -116,6 +116,12 @@ class Promize {
       });
   }
 
+  static resolve(value){
+    // this function automatically resolves to the
+    // given value passed in or returns undefined if nothing is given.
+    return new Promize((resolve) => resolve(value));
+  }
+
   #executeCallbacks() {
     // If the state is fulfilled run each resolved callback functions
     // in the order in which they were called.
@@ -191,4 +197,7 @@ module.exports = Promize;
 const prom = new Promize((resolve, reject) => {
   reject(10);
 });
+
+const resolved = Promize.resolve("it resolves this given value");
+resolved.then(console.log);
 
