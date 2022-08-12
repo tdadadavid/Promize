@@ -129,7 +129,53 @@ class Promize {
     return new Promize((resolve, reject) => reject(value));
   }
 
-  
+  static all(values = []){
+    // this is to keep track of the promises that
+    // are already settled. In this case settled means fulfilled.
+    let completedPromises = 0;
+
+    // by the nature of Promise.all, we know that it returns
+    // an array of the settled promises/non-promise value
+    const result = [];
+
+    // Promise.all returns a promise object.
+    return new Promize((resolve, reject) => {
+
+      // iterating over the values promises/non-promise values given to us
+      for (let i = 0; i < values.length; i++){
+        // we take each value/object
+        const promise = values[i];
+
+        // this makes our Promise.all accept mixture of
+        // promise/non-promise values eg Promize.all([1,3, Promise.resolve("it works")]);
+        // returns [1,3, "it works"] //TODO make it able to accept non-promise values only.
+        if(!(promise instanceof Promize)){
+          if (completedPromises === values.length) resolve(result);
+          result[i] = promise;
+          completedPromises++;
+          continue;
+        }
+
+        // if the promise at this index settles ie is resolved,
+        // we go on to call the ".then" method
+        promise.then(val => {
+          // we increment the number of completed promise operations
+          // to keep track of all settled promise.
+          completedPromises++;
+
+          // as we all know that Promise.all returns the values of each
+          // value/object given to our function in the order they were given
+          result[i] = val;
+
+          // check if all the promise are settled ie resolved, then
+          // pass the results to the next promise chain.
+          if (completedPromises === values.length) resolve(result);
+        })
+        .catch(reject);
+      }
+    });
+  }
+
 
   #executeCallbacks() {
     // If the state is fulfilled run each resolved callback functions
@@ -230,19 +276,5 @@ class Promize {
 
 module.exports = Promize;
 
-// const prom = new Promize((resolve, reject) => {
-//   reject(10);
-// });
-
-// const reject = Promize.reject("it automatically rejects this promise");
-const rejectedPromise = Promize.resolve(new Promize((resolve, reject) => reject("here")));
-
-// it changes the states of the promise to a rejected state while logging
-// the reason for rejection to the console.
-// reject.then("", console.log);
-
-
-// it changes the states of the promise from pending -> rejected and logs
-// the reason for rejection, which in this case is a "Promize object". This
-// means a promise object is passed down when ".then" is passed
-rejectedPromise.then(console.log, console.log);
+const p = Promize.all([9, 90, 0]);
+p.then(console.log, console.log);
