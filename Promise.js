@@ -29,6 +29,7 @@ class Promize {
   // serves as a queue to store rejected functions given via the ".catch" call in the order which they're called;
   #catchCallbacks = [];
 
+  // to bind this class to the "onFulfilled" and "onRejected" method.
   #onFulfilledBind = this.#onFulfilled.bind(this);
   #onRejectedBind = this.#onRejected.bind(this);
 
@@ -38,13 +39,13 @@ class Promize {
     this.#state = STATES.PENDING;
 
     // The value property holds either the "value" from a resolved
-    // operation or an error from a rejected operation.
+    // operation or a "reason/error" from a rejected operation.
     this.#value = undefined;
 
     try {
       executor(this.#onFulfilledBind, this.#onRejectedBind);
     } catch (error) {
-      this.#onRejected(error);
+      this.#onRejectedBind(error);
     }
   }
 
@@ -117,10 +118,18 @@ class Promize {
   }
 
   static resolve(value){
-    // this function automatically resolves to the
-    // given value passed in or returns undefined if nothing is given.
+    // this function automatically resolves the promise to a fulfilled
+    // state with the given value passed in or returns undefined if nothing is given.
     return new Promize((resolve) => resolve(value));
   }
+
+  static reject(value){
+    // this function automatically resolves the promise to
+    // a rejected state with the value passed as the parameter.
+    return new Promize((resolve, reject) => reject(value));
+  }
+
+  
 
   #executeCallbacks() {
     // If the state is fulfilled run each resolved callback functions
@@ -145,13 +154,28 @@ class Promize {
   // Known as resolve() in the promise.
   #onFulfilled(value) {
     // The promise/A+ specification states that the onfulfilled & onRejected
-    // method should not be called "the execution context contains platform code"
+    // method should not be called until "the execution context contains only platform code"
     // so this queueMicroTask serves to delay the promise a little before the
-    // function get called executed. This makes our Promise asynchronous
+    // function get executed. This makes our Promise asynchronous
     queueMicrotask(() => {
       // when a state is already fulfilled or rejected.
       // if the resolve or reject function is called we must not run anything.
       if (this.#state !== STATES.PENDING) return;
+
+      // if the value to be resolved by the "resolve" function
+      // is a promise, then resolve that promise
+      if (value instanceof Promize){
+        // note here we are using the functions that are bounded
+        // to the "this" keyword not just the normal functions this
+        // is because we are keeping track of the state and value
+        // of this promise, using the normal functions we make
+        // the static methods Promize.resolve and  Promize.reject
+        // to throw error about the state of the returned promize becuase
+        // of the weak nature of the "this" keyword in javascript to this
+        // end we are using the bound functions.
+        value.then(this.#onFulfilledBind, this.#onRejectedBind);
+        return;
+      }
 
       // update the value and state of the promise Object/function when a promise resolves.
       this.#updateStateAndValue(STATES.FULFILLED, value);
@@ -166,15 +190,27 @@ class Promize {
     // The promise/A+ specification states that the onfulfilled & onRejected
     // method should not be called until "the execution context contains platform code"
     // so this queueMicroTask serves to delay the promise a little before the
-    // function get called executed. This makes our Promise asynchronous
+    // function get called/executed. This makes our Promise asynchronous
     queueMicrotask(() => {
       // no matter the number of times the rejected callback function
       // is called, once the promise is rejected it must not perform
       // anything again meaning onRejected must be called only once.
       if (this.#state !== STATES.PENDING) return;
 
+      // this is needed because if the reason for rejection
+      // is a promise function/object,then we need to resolve
+      // it from scratch
       if (reason instanceof Promize) {
-        reason.then(this.#onFulfilled, this.#onRejected);
+        // note here we are using the functions that are bounded
+        // to the "this" keyword not just the normal functions this
+        // is because we are keeping track of the state and value
+        // of this promise, using the normal functions we make
+        // the static methods Promize.resolve and  Promize.reject
+        // to throw error about the state of the returned promize becuase
+        // of the weak nature of the "this" keyword in javascript to this
+        // end we are using the bound functions.
+        reason.then(this.#onFulfilledBind, this.#onRejectedBind);
+        return;
       }
 
       // update the value and state of the promise Object/function when a promise resolves.
@@ -194,10 +230,19 @@ class Promize {
 
 module.exports = Promize;
 
-const prom = new Promize((resolve, reject) => {
-  reject(10);
-});
+// const prom = new Promize((resolve, reject) => {
+//   reject(10);
+// });
 
-const resolved = Promize.resolve("it resolves this given value");
-resolved.then(console.log);
+// const reject = Promize.reject("it automatically rejects this promise");
+const rejectedPromise = Promize.resolve(new Promize((resolve, reject) => reject("here")));
 
+// it changes the states of the promise to a rejected state while logging
+// the reason for rejection to the console.
+// reject.then("", console.log);
+
+
+// it changes the states of the promise from pending -> rejected and logs
+// the reason for rejection, which in this case is a "Promize object". This
+// means a promise object is passed down when ".then" is passed
+rejectedPromise.then(console.log, console.log);
