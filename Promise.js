@@ -176,6 +176,64 @@ class Promize {
     });
   }
 
+  static allSettled(values = []){
+    // this is to keep track of the promises that
+    // are already settled. In this case settled means fulfilled.
+    let completedPromises = 0;
+
+    // by the nature of Promise.all, we know that it returns
+    // an array of the settled promises/non-promise value
+    const result = [];
+
+    // Promise.all returns a promise object.
+    return new Promize((resolve, reject) => {
+
+      // iterating over the values promises/non-promise values given to us
+      for (let i = 0; i < values.length; i++){
+        // we take each value/object
+        const promise = values[i];
+
+        // this makes our Promise.all accept mixture of
+        // promise/non-promise values eg Promize.all([1,3, Promise.resolve("it works")]);
+        // returns [1,3, "it works"]. It also accepts non-promise values only
+        if(!(promise instanceof Promize)){
+          if (completedPromises === values.length-1) resolve(result);
+          result[i] = { STATE: STATES.FULFILLED, value: promise};
+          completedPromises++;
+          continue;
+        }
+
+        // if the promise at this index settles ie is resolved,
+        // we go on to call the ".then" method
+        promise.then((val) => {
+          // we increment the number of completed promise operations
+          // to keep track of all settled promise.
+          completedPromises++;
+
+          // as we all know that Promise.all returns the values of each
+          // value/object given to our function in the order they were given
+          result[i] = { STATE: STATES.FULFILLED, value: val };
+
+          // check if all the promise are settled ie resolved, then
+          // pass the results to the next promise chain.
+          if (completedPromises === values.length) resolve(result);
+        })
+        .catch(reason => {
+          // note here we don't just reject and stop executing all other
+          // promises, but we store the rejected promise and the reason for
+          // rejection in the result array.
+          result[i] = { STATE: STATES.REJECTED, reason }
+          completedPromises++;
+        })
+        .finally(() => {
+          // check if all the promise are settled ie resolved, then
+          // pass the results to the next promise chain.
+          if (completedPromises === values.length) resolve(result);
+        });
+      }
+    });
+  }
+
 
   #executeCallbacks() {
     // If the state is fulfilled run each resolved callback functions
@@ -276,5 +334,5 @@ class Promize {
 
 module.exports = Promize;
 
-const p = Promize.all([Promize.resolve(292), Promize.resolve(3939), Promize.resolve("it works"), [3030, 40]]);
+const p = Promize.allSettled([Promize.resolve(292), Promize.reject(3939), Promize.resolve("it works"), [3030, 40]]);
 p.then(console.log, console.log);
