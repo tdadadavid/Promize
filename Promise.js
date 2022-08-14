@@ -271,7 +271,7 @@ class Promize {
       });
     });
   }
-  
+
   #executeCallbacks() {
     // If the state is fulfilled run each resolved callback functions
     // in the order in which they were called.
@@ -370,6 +370,3 @@ class Promize {
 }
 
 module.exports = Promize;
-
-const p = Promize.any([0,20, undefined, 3939]);
-p.then(console.log, console.log);
