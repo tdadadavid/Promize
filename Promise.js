@@ -253,7 +253,25 @@ class Promize {
     });
   }
 
+  static any(values = []){
+    const errors = [];
+    let rejectedPromises = 0;
+    let index = 0;
 
+    return new Promize((resolve, reject) => {
+      values.forEach((promise) => {
+        if (!(promise instanceof Promize)) resolve(promise);
+        promise.then(resolve).catch((err) => {
+          rejectedPromises++;
+          errors[index++] = err;
+
+          if(rejectedPromises === values.length-1)
+            reject(new AggregateError(errors, "No promise was resolved"));
+        });
+      });
+    });
+  }
+  
   #executeCallbacks() {
     // If the state is fulfilled run each resolved callback functions
     // in the order in which they were called.
@@ -353,5 +371,5 @@ class Promize {
 
 module.exports = Promize;
 
-const p = Promize.race([Promize.reject("this mess dey smell"),[1,4,0], Promize.resolve(90)]);
+const p = Promize.any([0,20, undefined, 3939]);
 p.then(console.log, console.log);
