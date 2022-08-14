@@ -3,6 +3,10 @@
  */
 
 /**
+ * More reading: MDN //TODO
+ */
+
+/**
  * It is possible to have an object that is thenable but not a promise.
  * This kind of object breaks the ECMAScript specification and the Promise/A+ spec.
  */
@@ -186,7 +190,7 @@ class Promize {
     const result = [];
 
     // Promise.all returns a promise object.
-    return new Promize((resolve, reject) => {
+    return new Promize((resolve) => {
 
       // iterating over the values promises/non-promise values given to us
       for (let i = 0; i < values.length; i++){
@@ -229,6 +233,23 @@ class Promize {
           if (completedPromises === values.length) resolve(result);
         });
       }
+    });
+  }
+
+  static race(values = []){
+    return new Promize((resolve, reject) => {
+      // iterating through each promise/non-promise value
+      // we settle the promise as soon as we have
+      // 1. A non-promise value
+      // 2. a promise that is already fulfilled/rejected.
+      // it basically means the first values in the values array
+      // to get resolved/rejected is returned`
+      values.forEach((promise) => {
+        // once we have a value that is not a promise object
+        // return the value to the next promise chain call ie resolve
+        if(!(promise instanceof Promize)) resolve(promise);
+        promise.then(resolve).catch(reject);
+      });
     });
   }
 
@@ -324,7 +345,7 @@ class Promize {
     });
   }
 
-  #updateStateAndValue(state, value) {
+  #updateStateAndValue(state, value)  {
     this.#state = state;
     this.#value = value;
   }
@@ -332,6 +353,5 @@ class Promize {
 
 module.exports = Promize;
 
-
-const p = Promize.allSettled([Promize.resolve(292), Promize.resolve("it works"), [3030, 40]]);
+const p = Promize.race([Promize.reject("this mess dey smell"),[1,4,0], Promize.resolve(90)]);
 p.then(console.log, console.log);
